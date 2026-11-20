@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tra cứu thẻ HTML</title>
+<style>
+  :root{--bg:#f5f7fb;--card:#fff;--text:#1f2937;--muted:#6b7280;--primary:#2563eb;--border:#e5e7eb;--code:#0f172a;--codetext:#e2e8f0;--ok:#16a34a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+  header{background:linear-gradient(135deg,#1d4ed8,#7c3aed);color:#fff;padding:32px 16px;text-align:center}
+  header h1{font-size:28px;margin-bottom:6px}
+  header p{opacity:.9}
+  .toolbar{position:sticky;top:0;z-index:10;background:var(--bg);padding:12px 16px;border-bottom:1px solid var(--border)}
+  .toolbar-inner{max-width:1000px;margin:auto}
+  #search{width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--border);border-radius:10px;outline:none}
+  #search:focus{border-color:var(--primary);box-shadow:0 0 0 3px #2563eb22}
+  .cats{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .cat{padding:6px 12px;border:1px solid var(--border);background:#fff;border-radius:999px;cursor:pointer;font-size:14px}
+  .cat.active{background:var(--primary);color:#fff;border-color:var(--primary)}
+  main{max-width:1000px;margin:20px auto;padding:0 16px}
+  .count{color:var(--muted);margin-bottom:12px;font-size:14px}
+  .group-title{margin:24px 0 10px;font-size:20px;color:var(--primary);border-left:4px solid var(--primary);padding-left:10px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:12px}
+  .card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+  .tagname{font-family:Consolas,Menlo,monospace;font-size:20px;font-weight:700;color:#be185d;background:#fdf2f8;padding:2px 10px;border-radius:6px}
+  .desc{font-weight:600;margin-bottom:6px}
+  .row{font-size:15px;margin:4px 0}
+  .row b{color:var(--primary)}
+  pre{background:var(--code);color:var(--codetext);padding:12px;border-radius:8px;overflow-x:auto;font-size:14px;margin-top:10px;font-family:Consolas,Menlo,monospace}
+  .btns{display:flex;gap:6px;flex-wrap:wrap}
+  button.copy{border:1px solid var(--primary);background:#fff;color:var(--primary);padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+  button.copy:hover{background:var(--primary);color:#fff}
+  button.copy.done{background:var(--ok);border-color:var(--ok);color:#fff}
+  .empty{text-align:center;color:var(--muted);padding:40px}
+  footer{text-align:center;color:var(--muted);padding:24px;font-size:14px}
+
+  .cats{flex-wrap:nowrap;overflow-x:auto;padding-bottom:6px}
+  .cat{white-space:nowrap;flex:0 0 auto}
+  button.run{border:1px solid var(--ok);background:var(--ok);color:#fff;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:13px}
+  button.run:hover{filter:brightness(.9)}
+  .note{font-size:12px;color:var(--muted);margin-top:6px}
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;padding:8px}
+  .modal.open{display:flex}
+  .mbox{background:#fff;margin:auto;width:100%;max-width:1200px;height:100%;max-height:96vh;border-radius:12px;display:flex;flex-direction:column;overflow:hidden}
+  .mhead{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  .mhead h3{font-size:15px;font-family:Consolas,Menlo,monospace}
+  .mbody{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0}
+  @media(max-width:800px){.mbody{grid-template-columns:1fr;grid-template-rows:1fr 1fr}}
+  .pane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--border)}
+  .plabel{font-size:12px;color:var(--muted);padding:4px 10px;background:#f9fafb;border-bottom:1px solid var(--border)}
+  #editor{flex:1;width:100%;border:0;padding:10px;font:13px/1.5 Consolas,Menlo,monospace;resize:none;outline:none;background:#0f172a;color:#e2e8f0;tab-size:2;white-space:pre}
+  #preview{flex:1;width:100%;border:0;background:#fff;min-height:0}
+  #con{height:90px;overflow:auto;background:#111;color:#9ae6b4;font:12px/1.4 Consolas,monospace;padding:6px 10px;white-space:pre-wrap}
+  #con .err{color:#fca5a5}
+</style>
+</head>
+<body>
+<header>
+  <h1>📘 Tra cứu HTML • CSS • JavaScript</h1>
+  <p>Công dụng – chức năng – ví dụ – copy nhanh – chạy thử ngay</p>
+</header>
+
+<div class="toolbar"><div class="toolbar-inner">
+  <input id="search" type="search" placeholder="Tìm thẻ/lệnh (vd: img, form, flex, grid, click, fetch...)">
+  <div class="cats" id="cats"></div>
+</div></div>
+
+<main>
+  <div class="count" id="count"></div>
+  <div id="list"></div>
+</main>
+<footer>Dùng cho học tạo website • "Copy ví dụ" = copy trọn file HTML (từ &lt;!DOCTYPE html&gt; đến &lt;/html&gt;) • "Chạy thử" để sửa và xem kết quả ngay</footer>
+
+<div class="modal" id="modal">
+  <div class="mbox">
+    <div class="mhead">
+      <h3 id="mtitle">Chạy thử</h3>
+      <div class="btns">
+        <button class="run" id="mrun">▶ Chạy lại</button>
+        <button class="copy" id="mcopy">📋 Copy code</button>
+        <button class="copy" id="mclose">✕ Đóng</button>
+      </div>
+    </div>
+    <div class="mbody">
+      <div class="pane">
+        <div class="plabel">Code (sửa tùy ý, kết quả tự cập nhật)</div>
+        <textarea id="editor" spellcheck="false"></textarea>
+      </div>
+      <div class="pane">
+        <div class="plabel">Kết quả</div>
+        <iframe id="preview" sandbox="allow-scripts allow-modals allow-forms allow-popups"></iframe>
+        <div class="plabel">Console (console.log và lỗi JS)</div>
+        <div id="con"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// [tên thẻ, nhóm, công dụng, chức năng, tính năng, thẻ mẫu để copy, ví dụ]
+const T = [
+// ===== CẤU TRÚC =====
+['!DOCTYPE','Cấu trúc trang','Khai báo loại tài liệu','Báo cho trình duyệt biết đây là HTML5','Phải đặt dòng đầu tiên, không cần thẻ đóng','<!DOCTYPE html>','<!DOCTYPE html>\n<html lang="vi">\n  ...\n</html>'],
+['html','Cấu trúc trang','Phần tử gốc','Bao toàn bộ nội dung trang','Thuộc tính lang giúp trình duyệt/công cụ đọc đúng ngôn ngữ','<html lang="vi">\n</html>','<html lang="vi">\n  <head>...</head>\n  <body>...</body>\n</html>'],
+['head','Cấu trúc trang','Vùng thông tin trang','Chứa metadata, tiêu đề, CSS, script','Nội dung không hiển thị trực tiếp trên trang','<head>\n</head>','<head>\n  <meta charset="UTF-8">\n  <title>Trang của tôi</title>\n</head>'],
+['body','Cấu trúc trang','Phần thân trang','Chứa mọi nội dung hiển thị cho người dùng','Mỗi trang chỉ có 1 body','<body>\n</body>','<body>\n  <h1>Xin chào</h1>\n</body>'],
+
+// ===== METADATA =====
+['title','Metadata (head)','Tiêu đề trang','Hiện trên tab trình duyệt, kết quả Google','Quan trọng cho SEO, mỗi trang chỉ 1 title','<title></title>','<title>Học HTML cơ bản</title>'],
+['meta','Metadata (head)','Thông tin mô tả trang','Khai báo charset, viewport, mô tả SEO, tác giả','Thẻ rỗng (không có thẻ đóng)','<meta name="description" content="">','<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<meta name="description" content="Website học lập trình">'],
+['link','Metadata (head)','Liên kết tài nguyên ngoài','Nhúng file CSS, favicon, font','rel="stylesheet" để nạp CSS','<link rel="stylesheet" href="style.css">','<link rel="stylesheet" href="style.css">\n<link rel="icon" href="favicon.ico">'],
+['style','Metadata (head)','Viết CSS trực tiếp','Định kiểu giao diện ngay trong file HTML','Phù hợp CSS ngắn, thử nghiệm','<style>\n</style>','<style>\n  body { background: #f0f0f0; }\n  h1 { color: blue; }\n</style>'],
+['base','Metadata (head)','Đường dẫn gốc','Đặt URL cơ sở cho mọi link tương đối','Chỉ 1 thẻ base trong trang','<base href="https://example.com/">','<base href="https://example.com/" target="_blank">'],
+
+// ===== BỐ CỤC NGỮ NGHĨA =====
+['header','Bố cục ngữ nghĩa','Phần đầu trang/khu vực','Chứa logo, tiêu đề, menu giới thiệu','Tốt cho SEO và trình đọc màn hình','<header>\n</header>','<header>\n  <h1>Website của tôi</h1>\n</header>'],
+['nav','Bố cục ngữ nghĩa','Khu vực điều hướng','Chứa menu liên kết chính','Giúp trình duyệt/công cụ hỗ trợ nhận biết menu','<nav>\n</nav>','<nav>\n  <a href="/">Trang chủ</a>\n  <a href="/gioi-thieu">Giới thiệu</a>\n</nav>'],
+['main','Bố cục ngữ nghĩa','Nội dung chính','Bao nội dung chính, độc nhất của trang','Chỉ dùng 1 lần trong mỗi trang','<main>\n</main>','<main>\n  <h2>Bài viết mới</h2>\n</main>'],
+['section','Bố cục ngữ nghĩa','Một khu vực/chương nội dung','Nhóm nội dung cùng chủ đề','Thường kèm một tiêu đề h2–h6','<section>\n</section>','<section>\n  <h2>Dịch vụ</h2>\n  <p>Mô tả dịch vụ...</p>\n</section>'],
+['article','Bố cục ngữ nghĩa','Nội dung độc lập','Bài viết, tin tức, bình luận có thể tách riêng','Có ý nghĩa khi đứng riêng','<article>\n</article>','<article>\n  <h2>Tiêu đề bài viết</h2>\n  <p>Nội dung...</p>\n</article>'],
+['aside','Bố cục ngữ nghĩa','Nội dung phụ','Thanh bên, quảng cáo, ghi chú liên quan','Nội dung liên quan nhưng không thuộc luồng chính','<aside>\n</aside>','<aside>\n  <h3>Bài viết liên quan</h3>\n</aside>'],
+['footer','Bố cục ngữ nghĩa','Chân trang/khu vực','Bản quyền, liên hệ, liên kết phụ','Dùng cho cả trang hoặc từng section','<footer>\n</footer>','<footer>\n  <p>&copy; 2026 Website của tôi</p>\n</footer>'],
+['div','Bố cục ngữ nghĩa','Khối chứa chung','Chia khối để bố cục, gắn CSS/JS','Là thẻ block, không mang ý nghĩa ngữ nghĩa','<div class="">\n</div>','<div class="box">\n  <p>Nội dung trong khối</p>\n</div>'],
+['span','Bố cục ngữ nghĩa','Vùng chứa trong dòng','Bọc một đoạn chữ để tô màu/định kiểu','Là thẻ inline, không xuống dòng','<span class=""></span>','<p>Giá: <span class="price">99.000đ</span></p>'],
+
+// ===== VĂN BẢN =====
+['h1 – h6','Văn bản','Tiêu đề các cấp','Tạo tiêu đề; h1 lớn nhất, h6 nhỏ nhất','Nên dùng 1 h1/trang, chia cấp theo thứ tự','<h1></h1>','<h1>Tiêu đề chính</h1>\n<h2>Mục lớn</h2>\n<h3>Mục nhỏ</h3>'],
+['p','Văn bản','Đoạn văn','Chứa một đoạn văn bản','Tự xuống dòng và có khoảng cách trên/dưới','<p></p>','<p>Đây là một đoạn văn.</p>'],
+['br','Văn bản','Xuống dòng','Ngắt dòng ngay tại vị trí đặt','Thẻ rỗng, không có thẻ đóng','<br>','Dòng 1<br>Dòng 2'],
+['hr','Văn bản','Đường kẻ ngang','Ngăn cách các phần nội dung','Thẻ rỗng, thể hiện sự chuyển chủ đề','<hr>','<p>Phần 1</p>\n<hr>\n<p>Phần 2</p>'],
+['pre','Văn bản','Văn bản định dạng sẵn','Giữ nguyên khoảng trắng và xuống dòng','Thường dùng để hiển thị code','<pre>\n</pre>','<pre>\nDòng 1\n    Dòng 2 thụt vào\n</pre>'],
+['blockquote','Văn bản','Trích dẫn khối','Trích đoạn dài từ nguồn khác','Thường thụt lề mặc định, có thuộc tính cite','<blockquote cite="">\n</blockquote>','<blockquote cite="https://example.com">\n  Học, học nữa, học mãi.\n</blockquote>'],
+['q','Văn bản','Trích dẫn ngắn','Trích dẫn ngay trong dòng','Trình duyệt tự thêm dấu ngoặc kép','<q></q>','<p>Anh ấy nói: <q>Hãy bắt đầu thôi</q></p>'],
+['cite','Văn bản','Tên tác phẩm/nguồn','Ghi tên sách, bài viết được trích dẫn','Thường hiển thị nghiêng','<cite></cite>','<cite>Dế Mèn Phiêu Lưu Ký</cite>'],
+['abbr','Văn bản','Từ viết tắt','Giải thích từ viết tắt khi rê chuột','Dùng thuộc tính title để giải nghĩa','<abbr title=""></abbr>','<abbr title="HyperText Markup Language">HTML</abbr>'],
+['address','Văn bản','Thông tin liên hệ','Chứa địa chỉ/liên hệ của tác giả hoặc tổ chức','Thường hiển thị nghiêng','<address>\n</address>','<address>\n  Hà Nội, Việt Nam<br>\n  Email: abc@mail.com\n</address>'],
+['time','Văn bản','Thời gian/ngày tháng','Đánh dấu ngày giờ để máy đọc được','Thuộc tính datetime chuẩn hóa thời gian','<time datetime=""></time>','<time datetime="2026-11-20">20/11/2026</time>'],
+['code','Văn bản','Đoạn mã','Hiển thị code dạng chữ đơn cách','Thường kết hợp với pre','<code></code>','<p>Dùng thẻ <code>&lt;p&gt;</code> để tạo đoạn văn.</p>'],
+['kbd','Văn bản','Phím bấm','Hiển thị phím người dùng nhập','Thường hiện chữ đơn cách','<kbd></kbd>','<p>Nhấn <kbd>Ctrl</kbd> + <kbd>C</kbd> để copy.</p>'],
+['samp','Văn bản','Kết quả mẫu','Hiển thị đầu ra của chương trình','Thường chữ đơn cách','<samp></samp>','<samp>Hello World</samp>'],
+['var','Văn bản','Biến','Đánh dấu biến toán/lập trình','Thường hiển thị nghiêng','<var></var>','<p>Diện tích = <var>a</var> × <var>b</var></p>'],
+
+// ===== ĐỊNH DẠNG =====
+['b','Định dạng chữ','In đậm (hình thức)','Làm chữ đậm, không nhấn mạnh ý nghĩa','Chỉ thay đổi hiển thị','<b></b>','<p>Đây là chữ <b>đậm</b>.</p>'],
+['strong','Định dạng chữ','Nhấn mạnh quan trọng','Chữ đậm và báo hiệu nội dung quan trọng','Trình đọc màn hình sẽ nhấn giọng','<strong></strong>','<p><strong>Chú ý:</strong> Không được bỏ qua.</p>'],
+['i','Định dạng chữ','In nghiêng (hình thức)','Làm chữ nghiêng (thuật ngữ, tên nước ngoài)','Chỉ thay đổi hiển thị','<i></i>','<p>Từ <i>website</i> là tiếng Anh.</p>'],
+['em','Định dạng chữ','Nhấn mạnh','Chữ nghiêng và nhấn mạnh ngữ điệu','Có ý nghĩa ngữ nghĩa','<em></em>','<p>Tôi <em>thật sự</em> thích HTML.</p>'],
+['u','Định dạng chữ','Gạch chân','Gạch chân văn bản','Nên dùng cẩn thận vì dễ nhầm với liên kết','<u></u>','<u>Từ gạch chân</u>'],
+['s','Định dạng chữ','Gạch ngang (hết hiệu lực)','Hiển thị thông tin không còn đúng','Thường dùng cho giá cũ','<s></s>','<p>Giá: <s>200.000đ</s> 150.000đ</p>'],
+['del','Định dạng chữ','Nội dung bị xóa','Đánh dấu nội dung đã bị loại bỏ','Hiển thị gạch ngang','<del></del>','<del>Nội dung cũ</del>'],
+['ins','Định dạng chữ','Nội dung được thêm','Đánh dấu nội dung mới chèn vào','Hiển thị gạch chân','<ins></ins>','<ins>Nội dung mới</ins>'],
+['mark','Định dạng chữ','Đánh dấu nổi bật','Tô sáng văn bản như bút dạ quang','Nền vàng mặc định','<mark></mark>','<p>Đây là <mark>từ khóa</mark> quan trọng.</p>'],
+['small','Định dạng chữ','Chữ nhỏ','Ghi chú phụ, bản quyền, điều khoản','Giảm cỡ chữ','<small></small>','<small>*Áp dụng đến hết tháng</small>'],
+['sub','Định dạng chữ','Chỉ số dưới','Hạ chữ xuống thấp (công thức hóa học)','Dùng cho H₂O...','<sub></sub>','H<sub>2</sub>O'],
+['sup','Định dạng chữ','Chỉ số trên','Nâng chữ lên cao (mũ, chú thích)','Dùng cho x², ghi chú...','<sup></sup>','x<sup>2</sup> + y<sup>2</sup>'],
+['dfn','Định dạng chữ','Định nghĩa thuật ngữ','Đánh dấu thuật ngữ đang được định nghĩa','Thường hiển thị nghiêng','<dfn></dfn>','<p><dfn>HTML</dfn> là ngôn ngữ đánh dấu siêu văn bản.</p>'],
+['bdo','Định dạng chữ','Đổi hướng chữ','Ghi đè hướng đọc văn bản','dir="rtl" đọc từ phải sang trái','<bdo dir="rtl"></bdo>','<bdo dir="rtl">Hello</bdo>'],
+['wbr','Định dạng chữ','Gợi ý ngắt dòng','Cho phép ngắt từ dài tại vị trí này','Thẻ rỗng','<wbr>','Từ-rất-dài<wbr>có-thể-ngắt'],
+
+// ===== DANH SÁCH =====
+['ul','Danh sách','Danh sách không thứ tự','Tạo danh sách dấu chấm','Chứa các thẻ li','<ul>\n  <li></li>\n</ul>','<ul>\n  <li>Táo</li>\n  <li>Cam</li>\n</ul>'],
+['ol','Danh sách','Danh sách có thứ tự','Tạo danh sách đánh số','Có thể dùng type, start, reversed','<ol>\n  <li></li>\n</ol>','<ol>\n  <li>Bước 1</li>\n  <li>Bước 2</li>\n</ol>'],
+['li','Danh sách','Mục trong danh sách','Một dòng của ul/ol/menu','Phải nằm trong ul, ol hoặc menu','<li></li>','<li>Mục danh sách</li>'],
+['dl','Danh sách','Danh sách mô tả','Nhóm cặp thuật ngữ – mô tả','Chứa dt và dd','<dl>\n  <dt></dt>\n  <dd></dd>\n</dl>','<dl>\n  <dt>HTML</dt>\n  <dd>Ngôn ngữ đánh dấu</dd>\n</dl>'],
+['dt','Danh sách','Thuật ngữ','Tên/thuật ngữ trong dl','Đi cùng dd','<dt></dt>','<dt>CSS</dt>'],
+['dd','Danh sách','Mô tả thuật ngữ','Phần giải thích của dt','Thường thụt vào','<dd></dd>','<dd>Ngôn ngữ tạo kiểu</dd>'],
+['menu','Danh sách','Danh sách lệnh/menu','Danh sách các lệnh hoặc công cụ','Giống ul về ngữ nghĩa cho thanh công cụ','<menu>\n  <li></li>\n</menu>','<menu>\n  <li><button>Lưu</button></li>\n  <li><button>Mở</button></li>\n</menu>'],
+
+// ===== LIÊN KẾT & MEDIA =====
+['a','Liên kết & Media','Liên kết (anchor)','Chuyển trang, tải file, nhảy tới vị trí trong trang','href là đích; target="_blank" mở tab mới','<a href=""></a>','<a href="https://example.com" target="_blank">Truy cập</a>'],
+['img','Liên kết & Media','Hình ảnh','Hiển thị ảnh trên trang','Thẻ rỗng; cần src và alt','<img src="" alt="">','<img src="anh.jpg" alt="Mô tả ảnh" width="300">'],
+['picture','Liên kết & Media','Ảnh đáp ứng','Chọn ảnh phù hợp theo màn hình/định dạng','Dùng với source và img','<picture>\n  <source srcset="" media="">\n  <img src="" alt="">\n</picture>','<picture>\n  <source srcset="nho.jpg" media="(max-width:600px)">\n  <img src="lon.jpg" alt="Ảnh">\n</picture>'],
+['source','Liên kết & Media','Nguồn media','Khai báo nhiều nguồn cho audio/video/picture','Thẻ rỗng, trình duyệt chọn nguồn phù hợp','<source src="" type="">','<source src="video.mp4" type="video/mp4">'],
+['figure','Liên kết & Media','Khối minh họa','Chứa ảnh, sơ đồ, code kèm chú thích','Đi cùng figcaption','<figure>\n  <img src="" alt="">\n  <figcaption></figcaption>\n</figure>','<figure>\n  <img src="a.jpg" alt="Hoa">\n  <figcaption>Hình 1: Hoa hồng</figcaption>\n</figure>'],
+['figcaption','Liên kết & Media','Chú thích hình','Mô tả cho nội dung trong figure','Phải nằm trong figure','<figcaption></figcaption>','<figcaption>Chú thích ảnh</figcaption>'],
+['audio','Liên kết & Media','Âm thanh','Phát nhạc/âm thanh trên web','controls hiện bộ điều khiển','<audio controls src=""></audio>','<audio controls>\n  <source src="nhac.mp3" type="audio/mpeg">\n</audio>'],
+['video','Liên kết & Media','Video','Phát video trên web','controls, autoplay, loop, muted, poster','<video controls width="400" src=""></video>','<video controls width="400">\n  <source src="video.mp4" type="video/mp4">\n</video>'],
+['track','Liên kết & Media','Phụ đề','Thêm phụ đề cho audio/video','Thẻ rỗng, file .vtt','<track src="" kind="subtitles" srclang="vi" label="Tiếng Việt">','<video controls src="v.mp4">\n  <track src="sub.vtt" kind="subtitles" srclang="vi" label="Tiếng Việt">\n</video>'],
+['map','Liên kết & Media','Bản đồ ảnh','Định nghĩa vùng bấm được trên ảnh','Dùng với area và usemap','<map name="">\n  <area shape="" coords="" href="">\n</map>','<img src="a.jpg" usemap="#m" alt="">\n<map name="m">\n  <area shape="rect" coords="0,0,100,100" href="a.html">\n</map>'],
+['area','Liên kết & Media','Vùng trong bản đồ ảnh','Xác định vùng click của map','Thẻ rỗng','<area shape="rect" coords="" href="">','<area shape="circle" coords="50,50,30" href="x.html">'],
+['canvas','Liên kết & Media','Khung vẽ','Vẽ đồ họa, game bằng JavaScript','Cần JS để vẽ nội dung','<canvas id="" width="300" height="150"></canvas>','<canvas id="c" width="300" height="150"></canvas>\n<script>\n  const ctx = document.getElementById("c").getContext("2d");\n  ctx.fillRect(10, 10, 100, 50);\n<\/script>'],
+['svg','Liên kết & Media','Đồ họa vector','Vẽ hình vector không vỡ khi phóng to','Có thể viết trực tiếp trong HTML','<svg width="100" height="100">\n</svg>','<svg width="100" height="100">\n  <circle cx="50" cy="50" r="40" fill="orange"/>\n</svg>'],
+
+// ===== BẢNG =====
+['table','Bảng','Bảng dữ liệu','Tạo bảng gồm hàng và cột','Dùng border, CSS để kẻ viền','<table border="1">\n</table>','<table border="1">\n  <tr><th>Tên</th><th>Tuổi</th></tr>\n  <tr><td>An</td><td>20</td></tr>\n</table>'],
+['caption','Bảng','Tiêu đề bảng','Đặt tên cho bảng','Phải là con đầu tiên của table','<caption></caption>','<caption>Danh sách học sinh</caption>'],
+['thead','Bảng','Phần đầu bảng','Nhóm hàng tiêu đề','Dùng với tbody, tfoot','<thead>\n</thead>','<thead>\n  <tr><th>Tên</th></tr>\n</thead>'],
+['tbody','Bảng','Phần thân bảng','Nhóm các hàng dữ liệu chính','Giúp cuộn/tạo kiểu riêng','<tbody>\n</tbody>','<tbody>\n  <tr><td>An</td></tr>\n</tbody>'],
+['tfoot','Bảng','Phần cuối bảng','Nhóm hàng tổng kết','Thường chứa tổng cộng','<tfoot>\n</tfoot>','<tfoot>\n  <tr><td>Tổng: 10</td></tr>\n</tfoot>'],
+['tr','Bảng','Hàng của bảng','Tạo một hàng','Chứa th hoặc td','<tr>\n</tr>','<tr><td>A</td><td>B</td></tr>'],
+['th','Bảng','Ô tiêu đề','Ô tiêu đề cột/hàng','Mặc định đậm, căn giữa; có colspan/rowspan','<th></th>','<th colspan="2">Thông tin</th>'],
+['td','Bảng','Ô dữ liệu','Ô chứa dữ liệu','Có colspan (gộp cột), rowspan (gộp hàng)','<td></td>','<td rowspan="2">Gộp 2 hàng</td>'],
+['colgroup','Bảng','Nhóm cột','Định kiểu cho nhóm cột','Chứa các thẻ col','<colgroup>\n  <col>\n</colgroup>','<colgroup>\n  <col span="2" style="background:#eee">\n</colgroup>'],
+['col','Bảng','Cột','Đặt thuộc tính cho một/nhiều cột','Thẻ rỗng, nằm trong colgroup','<col>','<col style="width:100px">'],
+
+// ===== FORM =====
+['form','Biểu mẫu','Biểu mẫu','Thu thập và gửi dữ liệu người dùng','action: nơi gửi; method: GET/POST','<form action="" method="post">\n</form>','<form action="/gui" method="post">\n  <input type="text" name="ten">\n  <button type="submit">Gửi</button>\n</form>'],
+['label','Biểu mẫu','Nhãn','Gắn nhãn cho ô nhập','Bấm vào label sẽ focus vào input (for/id)','<label for=""></label>','<label for="email">Email:</label>\n<input id="email" type="email">'],
+['input','Biểu mẫu','Ô nhập liệu','Nhập văn bản, số, ngày, mật khẩu, file...','Thẻ rỗng; type đổi kiểu (text, email, password, checkbox, radio, file, date...)','<input type="text" name="" placeholder="">','<input type="text" placeholder="Họ tên" required>\n<input type="password">\n<input type="checkbox"> Đồng ý\n<input type="radio" name="g"> Nam'],
+['textarea','Biểu mẫu','Ô nhập nhiều dòng','Nhập văn bản dài','rows, cols quy định kích thước','<textarea rows="4" cols="30"></textarea>','<textarea rows="4" cols="30" placeholder="Nhập nội dung"></textarea>'],
+['select','Biểu mẫu','Danh sách thả xuống','Chọn một/nhiều giá trị','Chứa option','<select name="">\n  <option value=""></option>\n</select>','<select name="tp">\n  <option value="hn">Hà Nội</option>\n  <option value="sg">TP.HCM</option>\n</select>'],
+['option','Biểu mẫu','Lựa chọn','Một mục trong select/datalist','value là giá trị gửi đi','<option value=""></option>','<option value="1" selected>Mục 1</option>'],
+['optgroup','Biểu mẫu','Nhóm lựa chọn','Gom nhóm các option','Có thuộc tính label','<optgroup label="">\n</optgroup>','<optgroup label="Miền Bắc">\n  <option>Hà Nội</option>\n</optgroup>'],
+['button','Biểu mẫu','Nút bấm','Gửi form, reset hoặc chạy JS','type="submit|reset|button"','<button type="button"></button>','<button type="submit">Gửi</button>'],
+['fieldset','Biểu mẫu','Nhóm trường form','Gom nhóm các ô nhập liên quan','Vẽ khung viền quanh nhóm','<fieldset>\n  <legend></legend>\n</fieldset>','<fieldset>\n  <legend>Thông tin</legend>\n  <input type="text">\n</fieldset>'],
+['legend','Biểu mẫu','Tiêu đề nhóm','Đặt tên cho fieldset','Phải là con đầu của fieldset','<legend></legend>','<legend>Thông tin cá nhân</legend>'],
+['datalist','Biểu mẫu','Gợi ý nhập','Danh sách gợi ý cho input','Liên kết với input bằng list/id','<datalist id="">\n  <option value="">\n</datalist>','<input list="ds">\n<datalist id="ds">\n  <option value="HTML">\n  <option value="CSS">\n</datalist>'],
+['output','Biểu mẫu','Kết quả tính toán','Hiển thị kết quả của form','Dùng với JS hoặc oninput','<output name=""></output>','<form oninput="kq.value = a.value">\n  <input id="a" type="range"> <output name="kq"></output>\n</form>'],
+['progress','Biểu mẫu','Thanh tiến trình','Hiển thị tiến độ công việc','value và max','<progress value="50" max="100"></progress>','<progress value="70" max="100">70%</progress>'],
+['meter','Biểu mẫu','Thang đo','Hiển thị giá trị trong khoảng biết trước','min, max, low, high, optimum','<meter value="0.6"></meter>','<meter value="6" min="0" max="10">6/10</meter>'],
+
+// ===== TƯƠNG TÁC =====
+['details','Tương tác','Nội dung ẩn/hiện','Tạo vùng thu gọn/mở rộng','Thuộc tính open để mở sẵn','<details>\n  <summary></summary>\n</details>','<details>\n  <summary>Xem thêm</summary>\n  <p>Nội dung ẩn.</p>\n</details>'],
+['summary','Tương tác','Tiêu đề của details','Phần luôn hiện để bấm mở/đóng','Là con đầu tiên của details','<summary></summary>','<summary>Bấm để mở</summary>'],
+['dialog','Tương tác','Hộp thoại','Tạo popup/modal','Mở bằng JS: showModal()','<dialog>\n</dialog>','<dialog id="d">Xin chào!</dialog>\n<button onclick="d.showModal()">Mở</button>'],
+
+// ===== SCRIPT & NHÚNG =====
+['script','Script & Nhúng','Mã JavaScript','Chạy JS hoặc nạp file JS','src nạp file ngoài; defer chạy sau khi tải trang','<script src=""><\/script>','<script>\n  alert("Xin chào");\n<\/script>\n<script src="app.js" defer><\/script>'],
+['noscript','Script & Nhúng','Nội dung dự phòng','Hiển thị khi trình duyệt tắt JS','Dùng để thông báo cho người dùng','<noscript></noscript>','<noscript>Vui lòng bật JavaScript.</noscript>'],
+['iframe','Script & Nhúng','Khung nhúng trang','Nhúng trang web khác (YouTube, bản đồ)','src, width, height','<iframe src="" width="400" height="300"></iframe>','<iframe src="https://www.youtube.com/embed/ID" width="400" height="300" allowfullscreen></iframe>'],
+['embed','Script & Nhúng','Nhúng nội dung ngoài','Nhúng plugin, PDF...','Thẻ rỗng','<embed src="" type="">','<embed src="tai-lieu.pdf" type="application/pdf" width="400" height="300">'],
+['object','Script & Nhúng','Đối tượng nhúng','Nhúng file/đối tượng ngoài','data, type; có nội dung dự phòng','<object data="" type=""></object>','<object data="tai-lieu.pdf" type="application/pdf" width="400" height="300"></object>'],
+['template','Script & Nhúng','Mẫu HTML','Lưu mẫu không hiển thị, JS nhân bản dùng sau','Nội dung không render cho đến khi clone','<template>\n</template>','<template id="t">\n  <li>Mục mới</li>\n</template>'],
+['slot','Script & Nhúng','Vị trí chèn (Web Component)','Chỗ giữ cho nội dung trong shadow DOM','Dùng với Web Components','<slot name=""></slot>','<slot name="tieu-de">Mặc định</slot>'],
+
+// ===== CSS: CƠ BẢN & SELECTOR =====
+['Selector: thẻ, .class, #id','CSS – Cơ bản & Selector','Chọn phần tử cần áp kiểu','Chọn theo tên thẻ, class (.) hoặc id (#)','Class dùng nhiều lần, id chỉ dùng 1 lần trong trang',`p { }
+.ten-class { }
+#ten-id { }`,`<style>
+  p { color: crimson; }
+  .box { background: #fef3c7; padding: 10px; }
+  #main { font-weight: bold; }
+</style>
+<p>Chọn theo thẻ p</p>
+<div class="box">Chọn theo class</div>
+<p id="main">Chọn theo id</p>`],
+['Cách thêm CSS vào HTML','CSS – Cơ bản & Selector','Inline, internal, external','Viết CSS trong thuộc tính style, thẻ style hoặc file .css riêng','Dự án thật nên dùng file CSS ngoài',`<p style="color:red;">Chữ đỏ</p>
+<style> p { color: red; } </style>
+<link rel="stylesheet" href="style.css">`,`<p style="color:green;">1) Inline style</p>
+<style>
+  .b { color: blue; }
+</style>
+<p class="b">2) Internal (thẻ style)</p>
+<!-- 3) External: <link rel="stylesheet" href="style.css"> -->`],
+['Selector con cháu: div p, div > p, h1 + p','CSS – Cơ bản & Selector','Chọn theo quan hệ giữa các thẻ','Chọn con cháu, con trực tiếp, thẻ liền kề','Giúp chọn chính xác mà không cần thêm class',`div p { }   /* mọi p bên trong div */
+div > p { } /* p là con trực tiếp */
+h1 + p { }  /* p ngay sau h1 */`,`<style>
+  div p { color: blue; }
+  div > span { color: red; }
+  h2 + p { background: yellow; }
+</style>
+<div>
+  <p>p trong div (xanh)</p>
+  <span>span con trực tiếp (đỏ)</span>
+</div>
+<h2>Tiêu đề</h2>
+<p>p liền sau h2 (nền vàng)</p>`],
+['Pseudo-class: :hover, :focus, :first-child','CSS – Cơ bản & Selector','Kiểu theo trạng thái','Đổi kiểu khi rê chuột, focus, hoặc phần tử đầu tiên','Rất hay dùng cho nút và ô nhập',`a:hover { color: red; }
+input:focus { border-color: blue; }
+li:first-child { font-weight: bold; }`,`<style>
+  .btn { padding:10px 20px; background:#2563eb; color:#fff; border:0; border-radius:8px; cursor:pointer; }
+  .btn:hover { background:#1e40af; }
+  input:focus { outline:2px solid orange; }
+  li:first-child { font-weight:bold; }
+</style>
+<button class="btn">Rê chuột vào tôi</button>
+<p><input placeholder="Bấm vào để focus"></p>
+<ul><li>Mục đầu (đậm)</li><li>Mục hai</li></ul>`],
+['::before và ::after','CSS – Cơ bản & Selector','Chèn nội dung giả bằng CSS','Thêm nội dung trước/sau phần tử mà không sửa HTML','Bắt buộc có thuộc tính content',`h2::before { content: "★ "; }
+h2::after  { content: " ★"; }`,`<style>
+  h2::before { content: "★ "; color: orange; }
+  h2::after  { content: " ★"; color: orange; }
+</style>
+<h2>Tiêu đề có sao</h2>`],
+[':nth-child()','CSS – Cơ bản & Selector','Chọn theo thứ tự','Chọn phần tử thứ n, chẵn, lẻ','even = chẵn, odd = lẻ; dùng tạo bảng sọc',`li:nth-child(odd) { }
+li:nth-child(even) { }
+li:nth-child(3) { }`,`<style>
+  li:nth-child(odd)  { background:#e0f2fe; }
+  li:nth-child(even) { background:#fef9c3; }
+  li:nth-child(3)    { font-weight:bold; }
+</style>
+<ul>
+  <li>Mục 1</li><li>Mục 2</li><li>Mục 3</li><li>Mục 4</li>
+</ul>`],
+['Biến CSS (--ten)','CSS – Cơ bản & Selector','Khai báo giá trị dùng lại','Định nghĩa màu/kích thước 1 lần, dùng nhiều nơi','Khai báo trong :root, gọi bằng var(--ten)',`:root { --mau-chinh: #2563eb; }
+.btn { background: var(--mau-chinh); }`,`<style>
+  :root { --mau-chinh: #7c3aed; --bo-goc: 10px; }
+  .btn { background: var(--mau-chinh); color:#fff; border:0; padding:10px 18px; border-radius: var(--bo-goc); }
+  h2 { color: var(--mau-chinh); }
+</style>
+<h2>Dùng biến CSS</h2>
+<button class="btn">Nút dùng biến</button>`],
+
+// ===== CSS: CHỮ & MÀU =====
+['color','CSS – Chữ & Màu','Màu chữ','Đặt màu chữ','Nhận tên màu, #hex, rgb(), hsl()',`color: red;
+color: #2563eb;
+color: rgb(255, 0, 0);`,`<style>
+  .a { color: red; }
+  .b { color: #2563eb; }
+  .c { color: rgb(22, 163, 74); }
+</style>
+<p class="a">Tên màu: red</p>
+<p class="b">Mã hex: #2563eb</p>
+<p class="c">Hàm rgb()</p>`],
+['background-color / background-image','CSS – Chữ & Màu','Nền','Đặt màu nền hoặc ảnh nền','background-size: cover để phủ kín',`background-color: #fef3c7;
+background-image: url("anh.jpg");
+background-size: cover;`,`<style>
+  .nen { background-color:#fef3c7; padding:20px; border-radius:8px; }
+</style>
+<div class="nen">Khối có màu nền</div>`],
+['linear-gradient()','CSS – Chữ & Màu','Nền chuyển màu','Tạo nền gradient','Dùng được cho background',`background: linear-gradient(135deg, #2563eb, #7c3aed);`,`<style>
+  .gd { height:120px; border-radius:12px; color:#fff; display:grid; place-items:center;
+        background: linear-gradient(135deg, #2563eb, #7c3aed); }
+</style>
+<div class="gd">Nền gradient</div>`],
+['font-family / font-size / font-weight','CSS – Chữ & Màu','Phông chữ','Chọn kiểu chữ, cỡ chữ, độ đậm','Nên khai báo font dự phòng',`font-family: Arial, sans-serif;
+font-size: 20px;
+font-weight: bold;`,`<style>
+  p { font-family: Georgia, serif; font-size: 22px; font-weight: bold; }
+</style>
+<p>Chữ Georgia, 22px, đậm</p>`],
+['text-align','CSS – Chữ & Màu','Căn lề chữ','Căn trái, phải, giữa, đều hai bên','left | right | center | justify',`text-align: center;`,`<style>
+  p { border:1px dashed #999; padding:6px; }
+</style>
+<p style="text-align:left">Căn trái</p>
+<p style="text-align:center">Căn giữa</p>
+<p style="text-align:right">Căn phải</p>`],
+['text-decoration','CSS – Chữ & Màu','Gạch chân/gạch ngang','Thêm hoặc bỏ gạch chân','none thường dùng để bỏ gạch chân của link',`text-decoration: none;
+text-decoration: underline;
+text-decoration: line-through;`,`<a href="#" style="text-decoration:none">Link không gạch chân</a><br>
+<span style="text-decoration:underline">Gạch chân</span><br>
+<span style="text-decoration:line-through">Gạch ngang</span>`],
+['line-height / letter-spacing','CSS – Chữ & Màu','Giãn dòng, giãn chữ','Chỉnh khoảng cách giữa các dòng và ký tự','line-height không cần đơn vị, ví dụ 1.6',`line-height: 1.8;
+letter-spacing: 2px;`,`<style>
+  p { line-height: 1.8; letter-spacing: 1px; width: 260px; }
+</style>
+<p>Đoạn văn dài để thấy khoảng cách giữa các dòng chữ khi chỉnh line-height và letter-spacing.</p>`],
+['text-transform','CSS – Chữ & Màu','Đổi kiểu chữ hoa/thường','Viết hoa, viết thường, hoa chữ cái đầu','uppercase | lowercase | capitalize',`text-transform: uppercase;`,`<p style="text-transform:uppercase">viết hoa toàn bộ</p>
+<p style="text-transform:capitalize">viết hoa chữ cái đầu</p>`],
+['text-shadow','CSS – Chữ & Màu','Bóng chữ','Tạo bóng cho chữ','Giá trị: x y blur màu',`text-shadow: 2px 2px 4px rgba(0,0,0,.4);`,`<h1 style="text-shadow: 3px 3px 6px rgba(0,0,0,.4)">Chữ có bóng</h1>`],
+
+// ===== CSS: BOX MODEL =====
+['margin','CSS – Box model & Viền','Khoảng cách bên ngoài','Tạo khoảng trống bên ngoài phần tử','margin: 0 auto để căn giữa khối có width',`margin: 20px;
+margin: 10px 20px;
+margin: 0 auto;`,`<style>
+  .k { width:200px; background:#bfdbfe; margin: 20px auto; padding: 10px; text-align:center; }
+</style>
+<div class="k">margin: 20px auto</div>
+<div class="k">Khối thứ hai</div>`],
+['padding','CSS – Box model & Viền','Khoảng cách bên trong','Tạo khoảng đệm giữa nội dung và viền','Có thể viết 1, 2 hoặc 4 giá trị',`padding: 20px;
+padding: 10px 30px;`,`<style>
+  .p1 { background:#fde68a; padding: 5px; }
+  .p2 { background:#fde68a; padding: 30px; margin-top:10px; }
+</style>
+<div class="p1">padding 5px</div>
+<div class="p2">padding 30px</div>`],
+['border','CSS – Box model & Viền','Viền','Tạo viền cho phần tử','Giá trị: độ dày kiểu màu',`border: 2px solid #2563eb;
+border-bottom: 3px dashed red;`,`<style>
+  .v1 { border: 2px solid #2563eb; padding: 10px; margin-bottom: 10px; }
+  .v2 { border-bottom: 3px dashed red; padding: 10px; }
+</style>
+<div class="v1">Viền liền xanh</div>
+<div class="v2">Gạch dưới đứt đỏ</div>`],
+['border-radius','CSS – Box model & Viền','Bo góc','Bo tròn góc phần tử','50% tạo hình tròn',`border-radius: 12px;
+border-radius: 50%;`,`<style>
+  .bo { width:100px; height:100px; background:#a78bfa; border-radius:16px; display:inline-block; }
+  .tron { border-radius:50%; }
+</style>
+<div class="bo"></div>
+<div class="bo tron"></div>`],
+['width / height / max-width','CSS – Box model & Viền','Kích thước','Đặt chiều rộng, chiều cao','max-width giúp responsive, width: 100% phủ hết khung',`width: 300px;
+height: 100px;
+max-width: 100%;`,`<style>
+  .s { width:300px; max-width:100%; height:80px; background:#86efac; display:grid; place-items:center; }
+</style>
+<div class="s">300px x 80px</div>`],
+['box-shadow','CSS – Box model & Viền','Đổ bóng khối','Tạo bóng đổ cho khối','Giá trị: x y blur màu',`box-shadow: 0 4px 12px rgba(0,0,0,.2);`,`<style>
+  .the { width:220px; padding:20px; border-radius:12px; background:#fff; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+</style>
+<div class="the">Thẻ có đổ bóng</div>`],
+['box-sizing','CSS – Box model & Viền','Cách tính kích thước','border-box: width đã gồm padding và border','Nên đặt cho mọi phần tử bằng *',`* { box-sizing: border-box; }`,`<style>
+  .a, .b { width:200px; padding:20px; border:5px solid #333; margin-bottom:10px; background:#e5e7eb; }
+  .b { box-sizing: border-box; }
+</style>
+<div class="a">content-box (rộng hơn 200px)</div>
+<div class="b">border-box (đúng 200px)</div>`],
+['overflow','CSS – Box model & Viền','Xử lý nội dung tràn','Ẩn hoặc tạo thanh cuộn khi nội dung quá lớn','hidden | scroll | auto',`overflow: auto;`,`<style>
+  .cuon { width:220px; height:70px; overflow:auto; border:1px solid #999; padding:6px; }
+</style>
+<div class="cuon">Nội dung dài. Nội dung dài. Nội dung dài. Nội dung dài. Nội dung dài. Nội dung dài. Nội dung dài. Nội dung dài.</div>`],
+
+// ===== CSS: BỐ CỤC =====
+['display','CSS – Bố cục','Kiểu hiển thị','Quy định phần tử là block, inline, ẩn...','block | inline | inline-block | none',`display: block;
+display: inline-block;
+display: none;`,`<style>
+  .ib { display:inline-block; width:80px; background:#93c5fd; margin:4px; text-align:center; }
+  .an { display:none; }
+</style>
+<div class="ib">A</div><div class="ib">B</div><div class="ib">C</div>
+<p class="an">Dòng này bị ẩn</p>`],
+['display: flex','CSS – Bố cục','Flexbox','Xếp các phần tử con theo hàng hoặc cột linh hoạt','Áp dụng cho khối cha',`.cha { display: flex; }`,`<style>
+  .cha { display:flex; gap:10px; }
+  .con { background:#fca5a5; padding:16px; }
+</style>
+<div class="cha">
+  <div class="con">1</div><div class="con">2</div><div class="con">3</div>
+</div>`],
+['justify-content / align-items','CSS – Bố cục','Căn chỉnh trong flex','Căn theo trục chính (ngang) và trục phụ (dọc)','center, space-between, flex-end...',`display: flex;
+justify-content: space-between;
+align-items: center;`,`<style>
+  .menu { display:flex; justify-content:space-between; align-items:center;
+          height:80px; background:#1e293b; color:#fff; padding:0 16px; }
+</style>
+<div class="menu"><b>Logo</b><span>Menu</span></div>`],
+['flex-wrap / gap / flex-direction','CSS – Bố cục','Tự xuống dòng, khoảng cách, hướng','Cho phép xuống dòng, tạo khoảng cách, đổi sang cột','flex-direction: column xếp dọc',`flex-wrap: wrap;
+gap: 12px;
+flex-direction: column;`,`<style>
+  .luoi { display:flex; flex-wrap:wrap; gap:10px; width:260px; }
+  .o { width:70px; height:50px; background:#6ee7b7; }
+</style>
+<div class="luoi">
+  <div class="o"></div><div class="o"></div><div class="o"></div>
+  <div class="o"></div><div class="o"></div><div class="o"></div>
+</div>`],
+['display: grid + grid-template-columns','CSS – Bố cục','Lưới (Grid)','Chia bố cục thành các cột/hàng','repeat(3, 1fr) = 3 cột bằng nhau',`display: grid;
+grid-template-columns: repeat(3, 1fr);
+gap: 10px;`,`<style>
+  .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; }
+  .grid div { background:#c4b5fd; padding:20px; text-align:center; }
+</style>
+<div class="grid">
+  <div>1</div><div>2</div><div>3</div><div>4</div><div>5</div><div>6</div>
+</div>`],
+['position: relative / absolute','CSS – Bố cục','Định vị','Đặt phần tử chồng lên hoặc theo vị trí cụ thể','absolute định vị theo cha có position: relative',`.cha { position: relative; }
+.con { position: absolute; top: 10px; right: 10px; }`,`<style>
+  .cha { position:relative; height:120px; background:#e2e8f0; }
+  .tag { position:absolute; top:8px; right:8px; background:crimson; color:#fff; padding:2px 8px; border-radius:6px; }
+</style>
+<div class="cha">Khối cha <span class="tag">NEW</span></div>`],
+['position: fixed / sticky','CSS – Bố cục','Cố định khi cuộn','fixed cố định theo màn hình, sticky dính khi cuộn tới','Thường dùng cho menu và nút lên đầu trang',`position: fixed;
+position: sticky; top: 0;`,`<style>
+  .thanh { position: sticky; top: 0; background:#2563eb; color:#fff; padding:10px; }
+  .dai { height: 600px; background: linear-gradient(#e0f2fe, #fef9c3); }
+</style>
+<div class="thanh">Thanh dính ở đầu khi cuộn</div>
+<div class="dai">Cuộn xuống để thử...</div>`],
+['z-index','CSS – Bố cục','Thứ tự chồng lớp','Phần tử có z-index lớn hơn nằm phía trên','Chỉ có tác dụng với phần tử đã có position',`position: relative;
+z-index: 10;`,`<style>
+  .x { position:absolute; width:120px; height:80px; }
+  .a { background:#fca5a5; top:20px; left:20px; z-index:1; }
+  .b { background:#93c5fd; top:50px; left:60px; z-index:2; }
+</style>
+<div style="position:relative;height:140px">
+  <div class="x a">z-index 1</div><div class="x b">z-index 2</div>
+</div>`],
+
+// ===== CSS: HIỆU ỨNG & RESPONSIVE =====
+['transition','CSS – Hiệu ứng & Responsive','Chuyển động mượt','Làm thay đổi kiểu diễn ra từ từ','Giá trị: thuộc tính thời gian',`transition: all 0.3s ease;`,`<style>
+  .nut { padding:12px 22px; border:0; border-radius:8px; background:#2563eb; color:#fff; transition: all .3s ease; cursor:pointer; }
+  .nut:hover { background:#db2777; transform: scale(1.1); }
+</style>
+<button class="nut">Rê chuột vào</button>`],
+['transform','CSS – Hiệu ứng & Responsive','Biến đổi hình','Xoay, phóng to, dịch chuyển phần tử','rotate(), scale(), translate()',`transform: rotate(15deg);
+transform: scale(1.2);
+transform: translateX(20px);`,`<style>
+  .h { width:80px; height:80px; background:#f97316; display:inline-block; margin:20px; }
+  .r { transform: rotate(20deg); }
+  .s { transform: scale(1.4); }
+  .t { transform: translateX(30px); }
+</style>
+<div class="h r"></div><div class="h s"></div><div class="h t"></div>`],
+['@keyframes + animation','CSS – Hiệu ứng & Responsive','Hoạt ảnh','Tạo chuyển động lặp lại theo các bước','Khai báo @keyframes rồi gọi bằng animation',`@keyframes nhay { from {transform: translateY(0);} to {transform: translateY(-30px);} }
+.bong { animation: nhay 0.6s infinite alternate; }`,`<style>
+  @keyframes nhay { from { transform: translateY(0); } to { transform: translateY(-40px); } }
+  .bong { width:50px; height:50px; border-radius:50%; background:#ef4444; margin:50px auto 0; animation: nhay .6s infinite alternate; }
+</style>
+<div class="bong"></div>`],
+['opacity','CSS – Hiệu ứng & Responsive','Độ trong suốt','Làm mờ phần tử','Giá trị từ 0 (trong suốt) đến 1',`opacity: 0.5;`,`<div style="width:120px;height:60px;background:#2563eb;opacity:1;color:#fff">1</div>
+<div style="width:120px;height:60px;background:#2563eb;opacity:.4;color:#fff">0.4</div>`],
+['cursor','CSS – Hiệu ứng & Responsive','Hình con trỏ chuột','Đổi hình dạng con trỏ khi rê chuột','pointer = bàn tay',`cursor: pointer;`,`<button style="cursor:pointer;padding:10px">pointer</button>
+<button style="cursor:not-allowed;padding:10px">not-allowed</button>
+<button style="cursor:help;padding:10px">help</button>`],
+['@media (responsive)','CSS – Hiệu ứng & Responsive','Giao diện thích ứng','Áp dụng CSS theo kích thước màn hình','Thường dùng max-width: 768px cho điện thoại',`@media (max-width: 768px) {
+  .box { background: red; }
+}`,`<style>
+  .box { padding:20px; background:#86efac; text-align:center; }
+  @media (max-width: 600px) {
+    .box { background:#fca5a5; }
+    .box::after { content: " (màn hình nhỏ)"; }
+  }
+</style>
+<div class="box">Thu nhỏ khung xem để đổi màu</div>`],
+['filter','CSS – Hiệu ứng & Responsive','Bộ lọc hình','Làm mờ, đổi sáng, trắng đen cho ảnh/khối','blur(), grayscale(), brightness()',`filter: blur(4px);
+filter: grayscale(100%);`,`<style>
+  .m { width:100px; height:100px; background:linear-gradient(45deg,#f43f5e,#3b82f6); display:inline-block; margin:6px; }
+</style>
+<div class="m"></div>
+<div class="m" style="filter:blur(4px)"></div>
+<div class="m" style="filter:grayscale(100%)"></div>`],
+
+// ===== JAVASCRIPT: CƠ BẢN =====
+['console.log()','JavaScript – Cơ bản','In ra bảng điều khiển','In giá trị để kiểm tra/gỡ lỗi','Xem kết quả ở khung Console bên dưới khi chạy thử',`console.log("Xin chào");`,`<p>Mở khung Console để xem kết quả</p>
+<script>
+  console.log("Xin chào JavaScript!");
+  console.log(1 + 2);
+<\/script>`],
+['let / const / var','JavaScript – Cơ bản','Khai báo biến','Lưu giá trị để dùng lại','let đổi được, const không gán lại được; hạn chế var',`let tuoi = 20;
+const ten = "An";`,`<script>
+  let tuoi = 20;
+  const ten = "An";
+  tuoi = 21;
+  console.log(ten, tuoi);
+<\/script>
+<p>Xem Console</p>`],
+['Kiểu dữ liệu','JavaScript – Cơ bản','Các loại giá trị','string, number, boolean, null, undefined, object','Dùng typeof để kiểm tra kiểu',`typeof "abc"; // string
+typeof 10;    // number`,`<script>
+  console.log(typeof "abc");
+  console.log(typeof 10);
+  console.log(typeof true);
+  console.log(typeof undefined);
+  console.log(typeof [1, 2]);
+<\/script>
+<p>Xem Console</p>`],
+['if...else','JavaScript – Cơ bản','Câu điều kiện','Chạy code khác nhau tùy điều kiện','So sánh bằng === (chặt chẽ)',`if (diem >= 5) {
+  // đạt
+} else {
+  // chưa đạt
+}`,`<p id="kq"></p>
+<script>
+  let diem = 7;
+  if (diem >= 8) {
+    document.getElementById("kq").textContent = "Giỏi";
+  } else if (diem >= 5) {
+    document.getElementById("kq").textContent = "Đạt";
+  } else {
+    document.getElementById("kq").textContent = "Chưa đạt";
+  }
+<\/script>`],
+['for loop','JavaScript – Cơ bản','Vòng lặp','Lặp lại đoạn code nhiều lần','for (khởi tạo; điều kiện; bước nhảy)',`for (let i = 1; i <= 5; i++) {
+  console.log(i);
+}`,`<ul id="ds"></ul>
+<script>
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById("ds").innerHTML += "<li>Mục " + i + "</li>";
+  }
+<\/script>`],
+['function','JavaScript – Cơ bản','Hàm','Gom đoạn code để tái sử dụng','Có tham số và giá trị trả về (return)',`function tong(a, b) {
+  return a + b;
+}`,`<p id="kq"></p>
+<script>
+  function tong(a, b) {
+    return a + b;
+  }
+  const chao = (ten) => "Xin chào " + ten;
+  document.getElementById("kq").textContent = "3 + 4 = " + tong(3, 4) + " | " + chao("An");
+<\/script>`],
+['Array (mảng)','JavaScript – Cơ bản','Danh sách giá trị','Lưu nhiều giá trị trong một biến','push, pop, length, truy cập bằng chỉ số bắt đầu từ 0',`const fruits = ["Táo", "Cam"];
+fruits.push("Xoài");`,`<script>
+  const fruits = ["Táo", "Cam"];
+  fruits.push("Xoài");
+  console.log(fruits);
+  console.log("Số phần tử:", fruits.length);
+  console.log("Phần tử đầu:", fruits[0]);
+<\/script>
+<p>Xem Console</p>`],
+['Object (đối tượng)','JavaScript – Cơ bản','Cặp khóa – giá trị','Lưu thông tin có nhiều thuộc tính','Truy cập bằng dấu chấm: obj.ten',`const sv = { ten: "An", tuoi: 20 };
+console.log(sv.ten);`,`<script>
+  const sv = { ten: "An", tuoi: 20 };
+  sv.lop = "10A1";
+  console.log(sv.ten, sv.tuoi, sv.lop);
+  console.log(sv);
+<\/script>
+<p>Xem Console</p>`],
+['Template literal (chuỗi dấu huyền)','JavaScript – Cơ bản','Chuỗi chèn biến','Chèn biến vào chuỗi và xuống dòng dễ dàng','Dùng dấu huyền và cú pháp dollar-ngoặc nhọn',`console.log(\`Xin chào \${ten}\`);`,`<p id="kq"></p>
+<script>
+  const ten = "An";
+  const tuoi = 20;
+  document.getElementById("kq").textContent = \`Xin chào \${ten}, bạn \${tuoi} tuổi\`;
+<\/script>`],
+['alert / prompt / confirm','JavaScript – Cơ bản','Hộp thoại','Hiện thông báo, nhập dữ liệu, xác nhận','Chặn người dùng cho đến khi đóng hộp thoại',`alert("Xin chào");
+let ten = prompt("Tên bạn?");
+let ok = confirm("Chắc chắn?");`,`<button onclick="alert('Xin chào!')">Bấm để hiện alert</button>
+<button onclick="demo()">prompt</button>
+<script>
+  function demo() {
+    const ten = prompt("Tên bạn là gì?");
+    if (ten) alert("Chào " + ten);
+  }
+<\/script>`],
+['try...catch','JavaScript – Cơ bản','Bắt lỗi','Xử lý lỗi mà không làm dừng chương trình','finally luôn chạy dù có lỗi hay không',`try {
+  // code có thể lỗi
+} catch (e) {
+  console.log(e.message);
+}`,`<script>
+  try {
+    JSON.parse("khong phai json");
+  } catch (e) {
+    console.log("Có lỗi:", e.message);
+  } finally {
+    console.log("Luôn chạy");
+  }
+<\/script>
+<p>Xem Console</p>`],
+
+// ===== JAVASCRIPT: DOM & SỰ KIỆN =====
+['getElementById()','JavaScript – DOM & Sự kiện','Lấy phần tử theo id','Tìm một phần tử trong trang bằng id','Trả về null nếu không tìm thấy',`document.getElementById("tieude")`,`<h2 id="tieude">Tiêu đề cũ</h2>
+<script>
+  const el = document.getElementById("tieude");
+  el.textContent = "Tiêu đề mới đã đổi!";
+  el.style.color = "crimson";
+<\/script>`],
+['querySelector() / querySelectorAll()','JavaScript – DOM & Sự kiện','Lấy phần tử bằng CSS selector','Tìm 1 hoặc nhiều phần tử như viết CSS','querySelectorAll trả về danh sách NodeList',`document.querySelector(".box");
+document.querySelectorAll("li");`,`<ul><li>Một</li><li>Hai</li><li>Ba</li></ul>
+<script>
+  document.querySelectorAll("li").forEach(function (li, i) {
+    li.textContent += " (số " + (i + 1) + ")";
+  });
+  document.querySelector("li").style.fontWeight = "bold";
+<\/script>`],
+['textContent / innerHTML','JavaScript – DOM & Sự kiện','Đổi nội dung phần tử','textContent đổi chữ; innerHTML đổi cả thẻ HTML','Không đưa dữ liệu người dùng nhập vào innerHTML (rủi ro XSS)',`el.textContent = "Chữ";
+el.innerHTML = "<b>Đậm</b>";`,`<p id="a"></p><p id="b"></p>
+<script>
+  document.getElementById("a").textContent = "<b>Đây là chữ thường</b>";
+  document.getElementById("b").innerHTML = "<b>Đây là chữ đậm</b>";
+<\/script>`],
+['style / classList','JavaScript – DOM & Sự kiện','Đổi giao diện bằng JS','Gán CSS trực tiếp hoặc thêm/xóa/bật tắt class','classList.toggle() rất tiện cho giao diện sáng/tối',`el.style.color = "red";
+el.classList.toggle("active");`,`<style>
+  .dark { background:#111; color:#fff; }
+  #hop { padding:20px; border:1px solid #999; }
+</style>
+<div id="hop">Khối này đổi nền được</div>
+<button onclick="document.getElementById('hop').classList.toggle('dark')">Bật/tắt nền tối</button>`],
+['addEventListener()','JavaScript – DOM & Sự kiện','Gắn sự kiện','Chạy code khi người dùng click, gõ phím, rê chuột...','Sự kiện hay dùng: click, input, submit, keydown, mouseover',`el.addEventListener("click", function () {
+  // xử lý
+});`,`<button id="nut">Bấm tôi</button>
+<p id="dem">Đã bấm: 0</p>
+<script>
+  let dem = 0;
+  document.getElementById("nut").addEventListener("click", function () {
+    dem++;
+    document.getElementById("dem").textContent = "Đã bấm: " + dem;
+  });
+<\/script>`],
+['createElement() / appendChild()','JavaScript – DOM & Sự kiện','Tạo phần tử mới','Tạo thẻ mới bằng JS rồi gắn vào trang','Dùng để thêm mục vào danh sách',`const li = document.createElement("li");
+li.textContent = "Mục mới";
+ul.appendChild(li);`,`<ul id="ds"></ul>
+<button id="them">Thêm mục</button>
+<script>
+  let n = 0;
+  document.getElementById("them").addEventListener("click", function () {
+    n++;
+    const li = document.createElement("li");
+    li.textContent = "Mục số " + n;
+    document.getElementById("ds").appendChild(li);
+  });
+<\/script>`],
+['Sự kiện input (đọc ô nhập)','JavaScript – DOM & Sự kiện','Lấy giá trị người dùng nhập','Đọc input.value mỗi khi người dùng gõ','Sự kiện input chạy theo từng ký tự',`input.addEventListener("input", function () {
+  console.log(input.value);
+});`,`<input id="o" placeholder="Gõ gì đó...">
+<p>Bạn gõ: <b id="ra"></b></p>
+<script>
+  const o = document.getElementById("o");
+  o.addEventListener("input", function () {
+    document.getElementById("ra").textContent = o.value;
+  });
+<\/script>`],
+['setAttribute() / remove()','JavaScript – DOM & Sự kiện','Đổi thuộc tính, xóa phần tử','Đổi src, href, class... hoặc xóa hẳn phần tử','Dùng getAttribute() để đọc thuộc tính',`a.setAttribute("href", "https://example.com");
+el.remove();`,`<a id="lk" href="#">Link ban đầu</a>
+<p id="xoa">Bấm nút để xóa dòng này</p>
+<button onclick="xong()">Đổi link và xóa dòng</button>
+<script>
+  function xong() {
+    document.getElementById("lk").setAttribute("href", "https://example.com");
+    document.getElementById("lk").textContent = "Link đã đổi";
+    document.getElementById("xoa").remove();
+  }
+<\/script>`],
+
+// ===== JAVASCRIPT: HÀM HỮU ÍCH =====
+['setTimeout() / setInterval()','JavaScript – Hàm hữu ích','Hẹn giờ','setTimeout chạy 1 lần sau thời gian; setInterval chạy lặp lại','Đơn vị mili giây; clearInterval() để dừng',`setTimeout(function () { }, 2000);
+setInterval(function () { }, 1000);`,`<h2 id="d">0</h2>
+<script>
+  let giay = 0;
+  const timer = setInterval(function () {
+    giay++;
+    document.getElementById("d").textContent = giay;
+    if (giay === 10) clearInterval(timer);
+  }, 1000);
+  setTimeout(function () { console.log("2 giây đã trôi qua"); }, 2000);
+<\/script>`],
+['forEach / map / filter','JavaScript – Hàm hữu ích','Xử lý mảng','Duyệt, biến đổi và lọc phần tử của mảng','map và filter trả về mảng mới',`arr.forEach(x => console.log(x));
+arr.map(x => x * 2);
+arr.filter(x => x > 2);`,`<script>
+  const so = [1, 2, 3, 4, 5];
+  console.log("map x2:", so.map(function (x) { return x * 2; }));
+  console.log("filter > 2:", so.filter(function (x) { return x > 2; }));
+  so.forEach(function (x) { console.log("Số", x); });
+<\/script>
+<p>Xem Console</p>`],
+['Math (random, round, max...)','JavaScript – Hàm hữu ích','Hàm toán học','Làm tròn, lấy số ngẫu nhiên, lớn nhất, nhỏ nhất','Math.random() trả về số từ 0 đến dưới 1',`Math.random();
+Math.round(2.6);
+Math.floor(Math.random() * 10);`,`<button onclick="rd()">Số ngẫu nhiên 1-10</button>
+<h2 id="s">?</h2>
+<script>
+  function rd() {
+    document.getElementById("s").textContent = Math.floor(Math.random() * 10) + 1;
+  }
+  console.log(Math.round(2.6), Math.max(3, 9, 5), Math.PI);
+<\/script>`],
+['Date (ngày giờ)','JavaScript – Hàm hữu ích','Làm việc với thời gian','Lấy ngày giờ hiện tại và định dạng','toLocaleDateString("vi-VN") hiển thị theo kiểu Việt Nam',`const now = new Date();
+now.getFullYear();`,`<p id="t"></p>
+<script>
+  const now = new Date();
+  document.getElementById("t").textContent =
+    now.toLocaleDateString("vi-VN") + " " + now.toLocaleTimeString("vi-VN");
+<\/script>`],
+['JSON.stringify / JSON.parse','JavaScript – Hàm hữu ích','Chuyển đổi dữ liệu JSON','Đổi object thành chuỗi và ngược lại','Dùng khi lưu trữ hoặc gửi dữ liệu',`const s = JSON.stringify({ a: 1 });
+const o = JSON.parse(s);`,`<script>
+  const sv = { ten: "An", tuoi: 20 };
+  const chuoi = JSON.stringify(sv);
+  console.log(chuoi);
+  console.log(JSON.parse(chuoi).ten);
+<\/script>
+<p>Xem Console</p>`],
+['fetch() (gọi API)','JavaScript – Hàm hữu ích','Lấy dữ liệu từ internet','Gửi yêu cầu HTTP và nhận dữ liệu từ API','Trả về Promise; dùng .then() hoặc async/await',`fetch("https://jsonplaceholder.typicode.com/todos/1")
+  .then(r => r.json())
+  .then(d => console.log(d));`,`<p id="kq">Đang tải...</p>
+<script>
+  fetch("https://jsonplaceholder.typicode.com/todos/1")
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      document.getElementById("kq").textContent = d.title;
+      console.log(d);
+    })
+    .catch(function (e) {
+      document.getElementById("kq").textContent = "Lỗi mạng: " + e.message;
+    });
+<\/script>`],
+['localStorage','JavaScript – Hàm hữu ích','Lưu dữ liệu trong trình duyệt','Lưu và đọc dữ liệu kể cả khi tắt trang','Chỉ lưu chuỗi; khung chạy thử có thể chặn, nên bọc try...catch',`localStorage.setItem("ten", "An");
+localStorage.getItem("ten");`,`<p id="kq"></p>
+<script>
+  try {
+    localStorage.setItem("ten", "An");
+    document.getElementById("kq").textContent = "Đã lưu: " + localStorage.getItem("ten");
+  } catch (e) {
+    document.getElementById("kq").textContent = "Khung chạy thử chặn localStorage, hãy thử trong file thật.";
+  }
+<\/script>`]
+];
+
+const catOrder = [...new Set(T.map(t => t[1]))];
+let activeCat = 'Tất cả';
+
+const $ = id => document.getElementById(id);
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function copyText(text, btn, label){
+  const done = () => { const old = btn.textContent; btn.textContent = '✓ Đã copy'; btn.classList.add('done');
+    setTimeout(()=>{btn.textContent = old; btn.classList.remove('done');},1200); };
+  if(navigator.clipboard && window.isSecureContext){
+    navigator.clipboard.writeText(text).then(done).catch(()=>fallback());
+  } else fallback();
+  function fallback(){
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+    ta.select(); try{document.execCommand('copy');}catch(e){} ta.remove(); done();
+  }
+}
+
+function isCode(cat){ return cat.startsWith('CSS') || cat.startsWith('JavaScript'); }
+function label(t){
+  const name = t[0];
+  if(isCode(t[1])) return name;
+  return name.startsWith('!') ? '<'+name+'>' : '<'+name.split(' ')[0]+'>';
+}
+
+// Ghép ví dụ thành trang HTML hoàn chỉnh (DOCTYPE ... /html)
+function fullDoc(t){
+  const name = t[0], cat = t[1], ex = t[6];
+  const ind = s => name === 'pre' ? s : s.split('\n').map(l => l ? '  ' + l : l).join('\n');
+  const meta = '  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n';
+  const head = '<head>\n' + meta + '  <title>Demo</title>\n</head>';
+  if(/^\s*<!DOCTYPE/i.test(ex)) return ex;
+  if(/^\s*<html/i.test(ex)) return '<!DOCTYPE html>\n' + ex;
+  if(name === 'head') return '<!DOCTYPE html>\n<html lang="vi">\n' + ex + '\n<body>\n  <p>Nội dung trang demo</p>\n</body>\n</html>';
+  if(name === 'body') return '<!DOCTYPE html>\n<html lang="vi">\n' + head + '\n' + ex + '\n</html>';
+  if(cat === 'Metadata (head)'){
+    const m = ex.includes('charset') ? '' : '  <meta charset="UTF-8">\n';
+    const ti = name === 'title' ? '' : '  <title>Demo</title>\n';
+    return '<!DOCTYPE html>\n<html lang="vi">\n<head>\n' + m + ti + ind(ex) + '\n</head>\n<body>\n  <p>Nội dung trang demo</p>\n</body>\n</html>';
+  }
+  return '<!DOCTYPE html>\n<html lang="vi">\n' + head + '\n<body>\n' + ind(ex) + '\n</body>\n</html>';
+}
+
+// ===== Chạy thử =====
+const hook = '<script>(function(){function s(t,a){try{parent.postMessage({__con:1,t:t,m:Array.prototype.map.call(a,function(x){try{return typeof x==="object"?JSON.stringify(x):String(x)}catch(e){return String(x)}}).join(" ")},"*")}catch(e){}}["log","warn","error","info"].forEach(function(k){var o=console[k];console[k]=function(){s(k,arguments);o.apply(console,arguments)}});window.addEventListener("error",function(e){s("error",[e.message])})})();<\/script>';
+function injectHook(doc){
+  if(/<head[^>]*>/i.test(doc)) return doc.replace(/<head[^>]*>/i, m => m + hook);
+  if(/<html[^>]*>/i.test(doc)) return doc.replace(/<html[^>]*>/i, m => m + hook);
+  return hook + doc;
+}
+function run(){
+  $('con').textContent = '';
+  $('preview').srcdoc = injectHook($('editor').value);
+}
+function openRun(t){
+  $('mtitle').textContent = 'Chạy thử: ' + label(t);
+  $('editor').value = fullDoc(t);
+  $('modal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  run();
+}
+function closeRun(){
+  $('modal').classList.remove('open');
+  document.body.style.overflow = '';
+  $('preview').srcdoc = '';
+}
+let runTimer;
+$('editor').addEventListener('input', () => { clearTimeout(runTimer); runTimer = setTimeout(run, 500); });
+$('mrun').onclick = run;
+$('mclose').onclick = closeRun;
+$('mcopy').onclick = e => copyText($('editor').value, e.target);
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeRun(); });
+window.addEventListener('message', e => {
+  const d = e.data;
+  if(!d || !d.__con || e.source !== $('preview').contentWindow) return;
+  const line = document.createElement('div');
+  if(d.t === 'error') line.className = 'err';
+  line.textContent = (d.t === 'error' ? '✖ ' : d.t === 'warn' ? '⚠ ' : '› ') + d.m;
+  $('con').appendChild(line);
+  $('con').scrollTop = $('con').scrollHeight;
+});
+
+function render(){
+  const q = $('search').value.trim().toLowerCase();
+  const list = $('list'); list.innerHTML = '';
+  let total = 0;
+  catOrder.forEach(cat => {
+    if(activeCat !== 'Tất cả' && activeCat !== cat) return;
+    const items = T.filter(t => t[1] === cat && (!q || t.join(' ').toLowerCase().includes(q)));
+    if(!items.length) return;
+    const h = document.createElement('h2'); h.className='group-title'; h.textContent = cat; list.appendChild(h);
+    items.forEach(t => {
+      total++;
+      const [name,,desc,func,feat,snippet,example] = t;
+      const card = document.createElement('div'); card.className = 'card';
+      card.innerHTML = `
+        <div class="card-head">
+          <span class="tagname">${esc(label(t))}</span>
+          <div class="btns">
+            <button class="copy" data-k="s">📋 ${isCode(t[1]) ? 'Copy lệnh' : 'Copy thẻ'}</button>
+            <button class="copy" data-k="e">📋 Copy ví dụ</button>
+            <button class="run" data-k="r">▶ Chạy thử</button>
+          </div>
+        </div>
+        <div class="desc">${esc(desc)}</div>
+        <div class="row"><b>Chức năng:</b> ${esc(func)}</div>
+        <div class="row"><b>Tính năng:</b> ${esc(feat)}</div>
+        <pre>${esc(example)}</pre>
+        <div class="note">"Copy ví dụ" sẽ copy trọn trang HTML (DOCTYPE → /html) chứa ví dụ này.</div>`;
+      card.querySelector('[data-k="s"]').onclick = e => copyText(snippet, e.target);
+      card.querySelector('[data-k="e"]').onclick = e => copyText(fullDoc(t), e.target);
+      card.querySelector('[data-k="r"]').onclick = () => openRun(t);
+      list.appendChild(card);
+    });
+  });
+  $('count').textContent = total ? `Hiển thị ${total} mục / tổng ${T.length}` : '';
+  if(!total) list.innerHTML = '<div class="empty">Không tìm thấy kết quả phù hợp 😢</div>';
+}
+
+function buildCats(){
+  const box = $('cats');
+  ['Tất cả', ...catOrder].forEach(c => {
+    const b = document.createElement('button'); b.className = 'cat' + (c===activeCat?' active':''); b.textContent = c;
+    b.onclick = () => { activeCat = c; [...box.children].forEach(x=>x.classList.toggle('active', x.textContent===c)); render(); };
+    box.appendChild(b);
+  });
+}
+
+$('search').addEventListener('input', render);
+buildCats(); render();
+</script>
+</body>
+</html>
